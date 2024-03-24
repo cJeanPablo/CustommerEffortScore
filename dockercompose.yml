@@ -1,20 +1,29 @@
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    image: mcr.microsoft.com/mssql/server:2022-CU12-ubuntu-22.04
     environment:
       SA_PASSWORD: "SqlServer2019!"
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
+    volumes:
+      - ./CREATE_TABLES.sql:/tmp/CREATE_TABLES.sql
+
     ports:
       - "1433:1433"
-  mssqltools:
-    image: mcr.microsoft.com/mssql-tools
+    networks:
+      - ces-network
+  ces-api:
+    image: ces-api:latest
+    environment: 
+      ASPNETCORE_ENVIRONMENT: "DEV"
+      ConnectionString: "server=sqlserver,1433;user id=sa;password=SqlServer2019!database=ces;timeout=100;MultipleActiveResultSets=True;TrustServerCertificate=True;Trusted_Connection=True"
+    ports:
+      - "8080:8080"
     depends_on:
       - sqlserver
-    volumes:
-      - ./01-BaseGeografica.sql:/tmp/01-BaseGeografica.sql
-      - ./02-BaseGeografica.sql:/tmp/02-BaseGeografica.sql
-      - ./init-basegeografica.sh:/tmp/init-basegeografica.sh
-    command: /bin/bash ./tmp/init-basegeografica.sh
-    ces-api:
-    
+    networks:
+      - ces-network
+
+networks:
+  ces-network:
+    driver: bridge

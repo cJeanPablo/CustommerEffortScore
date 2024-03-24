@@ -3,8 +3,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ces.Api.Infrastructure.Context
 {
-    public class CesContext(DbContextOptions<CesContext> options) : DbContext(options)
+    public class CesContext : DbContext
     {
+        public CesContext(DbContextOptions<CesContext> options) : base(options)
+        {
+            
+        }
         public DbSet<TipoPergunta> TipoPerguntas { get; set; }
         public DbSet<Pergunta> Perguntas { get; set; }
 

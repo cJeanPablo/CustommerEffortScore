@@ -29,10 +29,9 @@ namespace Ces.Api
 
         public void ConfigureServices(IServiceCollection services)
         {
-
-            services.AddDbContextPool<CesContext>(options =>
+            services.AddDbContext<CesContext>(options =>
             {
-                options.UseSqlServer(Configuration.GetSection("DefaultConnection:ConnectionString").Get<string>());
+                options.UseSqlServer(Configuration.GetSection("ConnectionString").Get<string>());
             });
             services.AddHttpContextAccessor();
             services.AddHealthChecksConfiguration();
