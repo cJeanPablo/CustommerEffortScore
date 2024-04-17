@@ -1,29 +1,42 @@
+version: '3.8'
+
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-CU12-ubuntu-22.04
+    image: mcr.microsoft.com/mssql/server:2019-latest
     environment:
       SA_PASSWORD: "SqlServer2019!"
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
-    volumes:
-      - ./CREATE_TABLES.sql:/tmp/CREATE_TABLES.sql
-
+    networks:
+      - my-networks
     ports:
       - "1433:1433"
-    networks:
-      - ces-network
-  ces-api:
-    image: ces-api:latest
-    environment: 
-      ASPNETCORE_ENVIRONMENT: "DEV"
-      ConnectionString: "server=sqlserver,1433;user id=sa;password=SqlServer2019!database=ces;timeout=100;MultipleActiveResultSets=True;TrustServerCertificate=True;Trusted_Connection=True"
-    ports:
-      - "8080:8080"
+
+  mssqltools:
+    image: mcr.microsoft.com/mssql-tools
     depends_on:
       - sqlserver
     networks:
-      - ces-network
+      - my-networks
+    volumes:
+      - ./crt.sql:/tmp/crt.sql
+      - ./populate-tables.sql:/tmp/populate-tables.sql
+      - ./init-sql.sh:/tmp/init-sql.sh
+    command: /bin/bash ./tmp/init-sql.sh
+
+  myapp:
+    image: cesapi:latest
+    depends_on:
+      - sqlserver
+    networks:
+      - my-networks
+    ports:
+      - "8080:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=DEV
+      - ConnectionString=server=sqlserver,1433;database=CES;user=sa;password=SqlServer2019!;timeout=100;MultipleActiveResultSets=True;TrustServerCertificate=True;
 
 networks:
-  ces-network:
+  my-networks:
     driver: bridge
+      
