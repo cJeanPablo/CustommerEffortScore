@@ -1,7 +1,9 @@
 using Ces.Api;
+using Serilog;
+using Serilog.Sinks.Elasticsearch;
 using System.Diagnostics;
 using System.Globalization;
-
+using System.Reflection;
 public class Program
 {
     public static void Main(string[] args)
@@ -15,25 +17,48 @@ public class Program
 
         try
         {
-            Console.WriteLine("Iniciando");
             CreateHostBuilder(args).Build().Run();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Falha ao iniciar. Erro: {ex.Message} . Detalhes: {ex.InnerException?.Message ?? ""}");
+            Log.Fatal($"Failed to start {Assembly.GetExecutingAssembly().GetName().Name}", ex);
+            throw;
         }
 
     }
-
-
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
         var hostBuilder = Host.CreateDefaultBuilder(args)
              .ConfigureWebHostDefaults(webBuilder =>
              {
                  webBuilder.UseStartup<Startup>();
-             });
+             }).ConfigureAppConfiguration(configuration =>
+             {
+                 configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                 configuration.AddJsonFile(
+                     $"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json",
+                     optional: true);
+             })
+                .UseSerilog((context, configuration) =>
+                {
+                    configuration.Enrich.FromLogContext()
+                    .Enrich.WithMachineName()
+                    .WriteTo.Console()
+                    .WriteTo.Elasticsearch(ConfigureElasticSink(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")))
+                    .Enrich.WithProperty("Environment", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"))
+                    .ReadFrom.Configuration(context.Configuration);
+                });
 
         return hostBuilder;
+    }
+    private static ElasticsearchSinkOptions ConfigureElasticSink(string environment)
+    {
+        return new ElasticsearchSinkOptions(new Uri("http://localhost:9200"))
+        {
+            AutoRegisterTemplate = true,
+            IndexFormat = $"{Assembly.GetExecutingAssembly().GetName().Name.ToLower()}-{environment.ToLower().Replace(".", "-")}-{DateTime.UtcNow:yyyy-MM}",
+            NumberOfReplicas = 1,
+            NumberOfShards = 2
+        };
     }
 }

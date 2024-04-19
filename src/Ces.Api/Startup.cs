@@ -5,6 +5,7 @@ using Microsoft.Identity.Web;
 using Ces.Api.HealthCheck;
 using Ces.Api.Configurations;
 using Ces.Api.Infrastructure.Context;
+using Serilog;
 
 namespace Ces.Api
 {
