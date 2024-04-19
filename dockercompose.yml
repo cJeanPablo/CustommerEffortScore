@@ -8,7 +8,7 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
     networks:
-      - my-networks
+      - my-network
     ports:
       - "1433:1433"
 
@@ -17,26 +17,42 @@ services:
     depends_on:
       - sqlserver
     networks:
-      - my-networks
+      - my-network
     volumes:
       - ./crt.sql:/tmp/crt.sql
       - ./populate-tables.sql:/tmp/populate-tables.sql
       - ./init-sql.sh:/tmp/init-sql.sh
     command: /bin/bash ./tmp/init-sql.sh
-
-  myapp:
-    image: cesapi:latest
-    depends_on:
-      - sqlserver
-    networks:
-      - my-networks
-    ports:
-      - "8080:8081"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=DEV
-      - ConnectionString=server=sqlserver,1433;database=CES;user=sa;password=SqlServer2019!;timeout=100;MultipleActiveResultSets=True;TrustServerCertificate=True;
-
+  elasticsearch:
+   container_name: elasticsearch
+   image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+   ports:
+    - 9200:9200
+   volumes:
+    - elasticsearch-data:/usr/share/elasticsearch/data
+   environment:
+    - stack.templates.enabled=true
+    - xpack.watcher.enabled=false
+    - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    - discovery.type=single-node
+   networks:
+    - my-network
+  kibana:
+   container_name: kibana
+   image: docker.elastic.co/kibana/kibana:7.17.0
+   ports:
+    - 5601:5601
+   depends_on:
+    - elasticsearch
+   environment:
+    - ELASTICSEARCH_URL=http://localhost:9200
+   networks:
+    - my-network
+  
 networks:
-  my-networks:
+  my-network:
     driver: bridge
+    
+volumes:
+  elasticsearch-data:   
       
